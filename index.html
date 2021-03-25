@@ -1,0 +1,160 @@
+
+<html>
+    <head>
+        <script src="https://d3js.org/d3.v6.min.js"></script>
+        <style>
+
+            .legend span {
+                margin-right: 30px;
+            }
+  
+            .gridlines line {
+              stroke: #bbb;
+            }
+            
+            .gridlines .domain {
+              stroke: none;
+            }
+              
+          
+        </style>
+    </head>
+    <body>
+        <h1> INFO 3300/5100</h1>
+        <h2> Project1 </h2>
+
+
+        <p id="p1">
+        <svg id="scatterplot" height="800" width="1200" style="margin-top:50px">
+            <text id="name" x="590" y="0"  text-anchor="end" alignment-baseline="hanging"></text>
+            <text id="team" x="590" y="15"  text-anchor="end" alignment-baseline="hanging"></text>
+        </svg>
+
+        <div id="scatterLegend" class="legend"> </div>
+
+        <script>
+            const svg = d3.select("svg#scatterplot");
+            const width = svg.attr("width");
+            const height = svg.attr("height");
+            const margins = {"top": 15, "right": 15, "bottom": 100, "left": 100}; // You can also leave out the quotes
+            const chartWidth = width - margins.left - margins.right;
+            const chartHeight = height - margins.top - margins.bottom;
+            let scatter = svg.append("g").attr("transform","translate("+margins.left+","+margins.top+")");
+            d3.csv("/nba2k20-full.csv").then(function(data) {
+                // Data preprocessing
+                data.forEach(function (d) { 
+                    d['rating'] = Number(d['rating']);
+                    d['salary'] = Number(d['salary'].replace(/\$/g,""));
+                    d['position'] = d['position'].substring(0,1);
+                }); 
+                const ratingExtent = d3.extent(data, d => d['rating'] );
+                const ratingScale = d3.scaleLinear().domain(ratingExtent).range([chartHeight, 0]);
+                const salaryExtent = d3.extent(data, d => d['salary'] );
+                const salaryScale = d3.scaleLinear().domain(salaryExtent).range([0, chartWidth]); 
+
+                const positionScale = d3.scaleOrdinal(d3.schemeCategory10);
+                let leftAxis = d3.axisLeft(ratingScale);
+                svg.append("g")
+                .attr("class", "y axis")
+                .attr("transform","translate("+(margins.left-10)+","+margins.top+")") 
+                .call(leftAxis);
+
+                let bottomAxis = d3.axisBottom(salaryScale).tickFormat(d3.format("$.0s"));
+                svg.append("g")
+                        .attr("class", "y axis")
+                        .attr("transform","translate("+margins.left+","+(chartHeight+margins.top+10)+")")
+                        .call(bottomAxis);
+
+                    
+                let jitter = function(){
+                    return (Math.random() * 8 - 4);
+                };
+                
+                jitter_value_x = jitter();
+                jitter_value_y = jitter();   
+                data.forEach( (d, i) => {
+                    let circle = scatter.append("circle")
+                    .attr("cx", salaryScale(d['salary']))
+                    .attr("cy", ratingScale(d['rating']))
+                    .attr("r", 3)
+                    .attr("opacity",0.7)
+                    .attr("index", i)
+                    .attr("name",d['full_name'])
+                    .attr("position",d['position'])
+                    .style("fill", positionScale(d['position']) );
+
+                    circle.on("mouseover", function() {
+                        d3.select(this)
+                            .transition().duration(200)
+                            .attr("stroke","black")
+                            .attr("stroke-width", 4)
+                            .attr("r", 4)
+                            .attr("opcacity",1);
+    
+                        d3.select("#name").text("Name: "+d['full_name']);
+                        d3.select("#team").text("Team: "+d['team']);
+      
+                    });
+
+                    circle.on("mouseout", function() {
+      
+                        d3.select(this)
+                            .transition().duration(200)
+                            .attr("stroke-width", 0)
+                            .attr("r", 3)
+                            .attr("opcacity",0.7);
+
+                        d3.select("#label").text("");
+                    });
+                });
+
+                positionScale.domain().forEach( function(d,i) {
+            
+                    d3.select("#scatterLegend")
+                        .append("span")
+                        .text(d)
+                        .style("color", positionScale(d) )
+                        .on("click", function() {
+                        
+                            d3.selectAll("#scatterplot circle").each( function() {
+                                
+                                let element = d3.select(this);
+                                if (element.attr("position") === d) {
+                                    //matches
+                                    //element.attr("opacity", 0.8);
+                                    element.attr("opacity", "0.7");
+                                }
+                                else {
+                                    //not match
+                                    //element.attr("opacity", 0);
+                                    element.attr("opacity", "0.1");
+                                }
+                                
+                            });
+                        });
+                
+                
+                });
+
+                d3.select("#scatterLegend")
+                    .append("span")
+                    .text("clear")
+                    .style("color","black" )
+                    .on("click", function() {
+                        
+                    d3.selectAll("#scatterplot circle").each( function() {
+                        
+                        let element = d3.select(this);
+
+                        element.attr("opacity", "0.8");
+                        
+                    });
+                        
+                        
+                });
+
+                
+            });
+        </script>
+    </body>
+</html>
