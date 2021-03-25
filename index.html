@@ -1,211 +1,210 @@
-
 <html>
-    <head>
-        <script src="https://d3js.org/d3.v6.min.js"></script>
-        <style>
 
-            .legend span {
-                margin-right: 50px;
-            }
-  
-            .gridlines line {
-              stroke: #bbb;
-            }
-            
-            .gridlines .domain {
-              stroke: none;
-            }
+<head>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        .legend span {
+            margin-right: 50px;
+        }
 
-            line.avgline {
-                stroke: black;
-                stroke-width: 2px;
-                stroke-dasharray: 8;
-            }
-              
-          
-        </style>
-    </head>
-    <body>
-        <h1> INFO 3300/5100</h1>
-        <h2> Project1 </h2>
+        .gridlines line {
+            stroke: #bbb;
+        }
+
+        .gridlines .domain {
+            stroke: none;
+        }
+
+        line.avgline {
+            stroke: black;
+            stroke-width: 2px;
+            stroke-dasharray: 8;
+        }
+    </style>
+</head>
+
+<body>
+    <h1> INFO 3300/5100</h1>
+    <h2> Project1 </h2>
 
 
-        <p id="p1">
-        <h3>Scatter plot of NBA2K20 players's rating vs salary</h3>
-        <svg id="scatterplot" height="800" width="1200" style="margin-top:50px">
-            <text id="name" x="590" y="0"  text-anchor="end" alignment-baseline="hanging"></text>
-            <text id="team" x="590" y="15"  text-anchor="end" alignment-baseline="hanging"></text>
-        </svg>
+    <p id="p1">
+    <h3>Scatter plot of NBA2K20 players's rating vs salary</h3>
+    <svg id="scatterplot" height="800" width="1200" style="margin-top:50px">
+        <text id="name" x="590" y="0" text-anchor="end" alignment-baseline="hanging"></text>
+        <text id="team" x="590" y="15" text-anchor="end" alignment-baseline="hanging"></text>
+    </svg>
 
-        <div id="scatterLegend" class="legend"> </div>
+    <div id="scatterLegend" class="legend"> </div>
 
-        <script>
-            const svg = d3.select("svg#scatterplot");
-            const width = svg.attr("width");
-            const height = svg.attr("height");
-            const margins = {"top": 15, "right": 15, "bottom": 100, "left": 100};
-            const chartWidth = width - margins.left - margins.right;
-            const chartHeight = height - margins.top - margins.bottom;
-            let scatter = svg.append("g").attr("transform","translate("+margins.left+","+margins.top+")");
-            d3.csv("/nba2k20-full.csv").then(function(data) {
-                // Data preprocessing
-                data.forEach(function (d) { 
-                    d['rating'] = Number(d['rating']);
-                    d['salary'] = Number(d['salary'].replace(/\$/g,""));
-                    d['position'] = d['position'].substring(0,1);
-                    if(d['position'] == 'C'){
-                        d['position'] = 'Center';
-                    }else if(d['position'] == 'F'){
-                        d['position'] = 'Forward';
-                    }else{
-                        d['position'] = 'Guard';
-                    }
-                }); 
+    <script>
+        const svg = d3.select("svg#scatterplot");
+        const width = svg.attr("width");
+        const height = svg.attr("height");
+        const margins = { "top": 15, "right": 15, "bottom": 100, "left": 100 };
+        const chartWidth = width - margins.left - margins.right;
+        const chartHeight = height - margins.top - margins.bottom;
+        let scatter = svg.append("g").attr("transform", "translate(" + margins.left + "," + margins.top + ")");
+        d3.csv("/nba2k20-full.csv").then(function (data) {
+            // Data preprocessing
+            data.forEach(function (d) {
+                d['rating'] = Number(d['rating']);
+                d['salary'] = Number(d['salary'].replace(/\$/g, ""));
+                d['position'] = d['position'].substring(0, 1);
+                if (d['position'] == 'C') {
+                    d['position'] = 'Center';
+                } else if (d['position'] == 'F') {
+                    d['position'] = 'Forward';
+                } else {
+                    d['position'] = 'Guard';
+                }
+            });
 
-                const ratingExtent = d3.extent(data, d => d['rating'] );
-                const avgRating = d3.mean(data, d => d['rating']);
-                const ratingScale = d3.scaleLinear().domain(ratingExtent).range([chartHeight, 0]);
-                const salaryExtent = d3.extent(data, d => d['salary'] );
-                const salaryScale = d3.scaleLinear().domain(salaryExtent).range([0, chartWidth]); 
+            const ratingExtent = d3.extent(data, d => d['rating']);
+            const avgRating = d3.mean(data, d => d['rating']);
+            const ratingScale = d3.scaleLinear().domain(ratingExtent).range([chartHeight, 0]);
+            const salaryExtent = d3.extent(data, d => d['salary']);
+            const salaryScale = d3.scaleLinear().domain(salaryExtent).range([0, chartWidth]);
 
-                const positionScale = d3.scaleOrdinal(d3.schemeCategory10);
-                let leftAxis = d3.axisLeft(ratingScale);
-                svg.append("g")
+            const positionScale = d3.scaleOrdinal(d3.schemeCategory10);
+            let leftAxis = d3.axisLeft(ratingScale);
+            svg.append("g")
                 .attr("class", "y axis")
-                .attr("transform","translate("+(margins.left-10)+","+margins.top+")") 
+                .attr("transform", "translate(" + (margins.left - 10) + "," + margins.top + ")")
                 .call(leftAxis);
 
-                let leftGridlines = d3.axisLeft(ratingScale)
-                        .tickSize(-chartWidth-10)
-                        .tickFormat("");
+            let leftGridlines = d3.axisLeft(ratingScale)
+                .tickSize(-chartWidth - 10)
+                .tickFormat("");
 
-                svg.append("g")
-                    .attr("class", "y gridlines")
-                    .attr("transform","translate("+(margins.left-10)+","+margins.top+")") 
-                    .call(leftGridlines);
+            svg.append("g")
+                .attr("class", "y gridlines")
+                .attr("transform", "translate(" + (margins.left - 10) + "," + margins.top + ")")
+                .call(leftGridlines);
 
-                let bottomAxis = d3.axisBottom(salaryScale).tickFormat(d3.format("$.0s"));
-                svg.append("g")
-                        .attr("class", "y axis")
-                        .attr("transform","translate("+margins.left+","+(chartHeight+margins.top+10)+")")
-                        .call(bottomAxis);
+            let bottomAxis = d3.axisBottom(salaryScale).tickFormat(d3.format("$.0s"));
+            svg.append("g")
+                .attr("class", "y axis")
+                .attr("transform", "translate(" + margins.left + "," + (chartHeight + margins.top + 10) + ")")
+                .call(bottomAxis);
 
-                svg.append("g")
-                    .attr("class", "y gridlines")
-                    .attr("transform","translate("+(margins.left-10)+","+margins.top+")") 
-                    .call(leftGridlines);
+            svg.append("g")
+                .attr("class", "y gridlines")
+                .attr("transform", "translate(" + (margins.left - 10) + "," + margins.top + ")")
+                .call(leftGridlines);
 
-                svg.append("line")
-                    .attr("class","avgline")
-                    .attr("transform","translate("+margins.left+","+margins.top+")")
-                    .attr("x1", 0)
-                    .attr("x2", chartWidth+10)
-                    .attr("y1", ratingScale(avgRating) )
-                    .attr("y2", ratingScale(avgRating) );
+            svg.append("line")
+                .attr("class", "avgline")
+                .attr("transform", "translate(" + margins.left + "," + margins.top + ")")
+                .attr("x1", 0)
+                .attr("x2", chartWidth + 10)
+                .attr("y1", ratingScale(avgRating))
+                .attr("y2", ratingScale(avgRating));
 
-                svg.append("text")
-                    .attr("class", "x label")
-                    .attr("text-anchor", "end")
-                    .attr("x", chartWidth-400)
-                    .attr("y", chartHeight+80)
-                    .text("Salary");
+            svg.append("text")
+                .attr("class", "x label")
+                .attr("text-anchor", "end")
+                .attr("x", chartWidth - 400)
+                .attr("y", chartHeight + 80)
+                .text("Salary");
 
-                svg.append("text")
-                    .attr("class", "y label")
-                    .attr("text-anchor", "end")
-                    .attr("x",-300)
-                    .attr("y", 30)
-                    .attr("dy", ".75em")
-                    .attr("transform", "rotate(-90)")
-                    .text("Rating");
-                    
-                let jitter = function(){
-                    return (Math.random() * 8 - 4);
-                };
-                
-                jitter_value_x = jitter();
-                jitter_value_y = jitter();   
-                data.forEach( (d, i) => {
-                    let circle = scatter.append("circle")
+            svg.append("text")
+                .attr("class", "y label")
+                .attr("text-anchor", "end")
+                .attr("x", -300)
+                .attr("y", 30)
+                .attr("dy", ".75em")
+                .attr("transform", "rotate(-90)")
+                .text("Rating");
+
+            let jitter = function () {
+                return (Math.random() * 8 - 4);
+            };
+
+            jitter_value_x = jitter();
+            jitter_value_y = jitter();
+            data.forEach((d, i) => {
+                let circle = scatter.append("circle")
                     .attr("cx", salaryScale(d['salary']))
                     .attr("cy", ratingScale(d['rating']))
                     .attr("r", 3)
-                    .attr("opacity",0.7)
+                    .attr("opacity", 0.7)
                     .attr("index", i)
-                    .attr("name",d['full_name'])
-                    .attr("position",d['position'])
-                    .style("fill", positionScale(d['position']) );
+                    .attr("name", d['full_name'])
+                    .attr("position", d['position'])
+                    .style("fill", positionScale(d['position']));
 
-                    circle.on("mouseover", function() {
-                        d3.select(this)
-                            .transition().duration(200)
-                            .attr("stroke","black")
-                            .attr("stroke-width", 4)
-                            .attr("r", 4)
-                            .attr("opcacity",1);
-    
-                        d3.select("#name").text("Name: "+d['full_name']);
-                        d3.select("#team").text("Team: "+d['team']);
-      
-                    });
+                circle.on("mouseover", function () {
+                    d3.select(this)
+                        .transition().duration(200)
+                        .attr("stroke", "black")
+                        .attr("stroke-width", 4)
+                        .attr("r", 4)
+                        .attr("opcacity", 1);
 
-                    circle.on("mouseout", function() {
-      
-                        d3.select(this)
-                            .transition().duration(200)
-                            .attr("stroke-width", 0)
-                            .attr("r", 3)
-                            .attr("opcacity",0.7);
+                    d3.select("#name").text("Name: " + d['full_name']);
+                    d3.select("#team").text("Team: " + d['team']);
 
-                        d3.select("#label").text("");
-                    });
                 });
 
-                positionScale.domain().forEach( function(d,i) {
-            
-                    d3.select("#scatterLegend")
-                        .append("span")
-                        .text(d)
-                        .style("color", positionScale(d) )
-                        .on("click", function() {
-                        
-                            d3.selectAll("#scatterplot circle").each( function() {
-                                
-                                let element = d3.select(this);
-                                if (element.attr("position") === d) {
-                                    //matches
-                                    element.attr("opacity", "0.7");
-                                }
-                                else {
-                                    //not match
-                                    element.attr("opacity", "0.1");
-                                }
-                                
-                            });
-                        });
-                
-                
+                circle.on("mouseout", function () {
+
+                    d3.select(this)
+                        .transition().duration(200)
+                        .attr("stroke-width", 0)
+                        .attr("r", 3)
+                        .attr("opcacity", 0.7);
+
+                    d3.select("#label").text("");
                 });
+            });
+
+            positionScale.domain().forEach(function (d, i) {
 
                 d3.select("#scatterLegend")
                     .append("span")
-                    .text("clear")
-                    .style("color","black" )
-                    .on("click", function() {
-                        
-                    d3.selectAll("#scatterplot circle").each( function() {
-                        
+                    .text(d)
+                    .style("color", positionScale(d))
+                    .on("click", function () {
+
+                        d3.selectAll("#scatterplot circle").each(function () {
+
+                            let element = d3.select(this);
+                            if (element.attr("position") === d) {
+                                //matches
+                                element.attr("opacity", "0.7");
+                            }
+                            else {
+                                //not match
+                                element.attr("opacity", "0.1");
+                            }
+
+                        });
+                    });
+
+
+            });
+
+            d3.select("#scatterLegend")
+                .append("span")
+                .text("clear")
+                .style("color", "black")
+                .on("click", function () {
+
+                    d3.selectAll("#scatterplot circle").each(function () {
+
                         let element = d3.select(this);
 
                         element.attr("opacity", "0.7");
-                        
+
                     });
-                        
-                        
+
+
                 });
 
-                
-            });
-        </script>
-    </body>
+
+        });
+    </script>
+</body>
+
 </html>
