@@ -5,7 +5,7 @@
         <style>
 
             .legend span {
-                margin-right: 30px;
+                margin-right: 50px;
             }
   
             .gridlines line {
@@ -31,6 +31,7 @@
 
 
         <p id="p1">
+        <h3>Scatter plot of NBA2K20 players's rating vs salary</h3>
         <svg id="scatterplot" height="800" width="1200" style="margin-top:50px">
             <text id="name" x="590" y="0"  text-anchor="end" alignment-baseline="hanging"></text>
             <text id="team" x="590" y="15"  text-anchor="end" alignment-baseline="hanging"></text>
@@ -42,7 +43,7 @@
             const svg = d3.select("svg#scatterplot");
             const width = svg.attr("width");
             const height = svg.attr("height");
-            const margins = {"top": 15, "right": 15, "bottom": 100, "left": 100}; // You can also leave out the quotes
+            const margins = {"top": 15, "right": 15, "bottom": 100, "left": 100};
             const chartWidth = width - margins.left - margins.right;
             const chartHeight = height - margins.top - margins.bottom;
             let scatter = svg.append("g").attr("transform","translate("+margins.left+","+margins.top+")");
@@ -77,7 +78,7 @@
                 let leftGridlines = d3.axisLeft(ratingScale)
                         .tickSize(-chartWidth-10)
                         .tickFormat("");
-                        
+
                 svg.append("g")
                     .attr("class", "y gridlines")
                     .attr("transform","translate("+(margins.left-10)+","+margins.top+")") 
@@ -101,6 +102,22 @@
                     .attr("x2", chartWidth+10)
                     .attr("y1", ratingScale(avgRating) )
                     .attr("y2", ratingScale(avgRating) );
+
+                svg.append("text")
+                    .attr("class", "x label")
+                    .attr("text-anchor", "end")
+                    .attr("x", chartWidth-400)
+                    .attr("y", chartHeight+80)
+                    .text("Salary");
+
+                svg.append("text")
+                    .attr("class", "y label")
+                    .attr("text-anchor", "end")
+                    .attr("x",-300)
+                    .attr("y", 30)
+                    .attr("dy", ".75em")
+                    .attr("transform", "rotate(-90)")
+                    .text("Rating");
                     
                 let jitter = function(){
                     return (Math.random() * 8 - 4);
@@ -157,12 +174,10 @@
                                 let element = d3.select(this);
                                 if (element.attr("position") === d) {
                                     //matches
-                                    //element.attr("opacity", 0.8);
                                     element.attr("opacity", "0.7");
                                 }
                                 else {
                                     //not match
-                                    //element.attr("opacity", 0);
                                     element.attr("opacity", "0.1");
                                 }
                                 
