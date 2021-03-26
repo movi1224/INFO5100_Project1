@@ -51,8 +51,12 @@
         <input type="range" min="21" max="41" step="1" id="slider">
     </div>
 
+
+    <svg id="barchart" height="700" width="800" style="margin-top:50px" ></svg>
+
     <script>
         const svg = d3.select("svg#scatterplot");
+        const barChart = d3.select("svg#barchart");
         const width = svg.attr("width");
         const height = svg.attr("height");
         const margin = { "top": 15, "right": 15, "bottom": 100, "left": 100 };
@@ -62,7 +66,12 @@
         let annotations = svg.append("g").attr("id", "annotations");
         let chartArea = svg.append("g").attr("id", "points")
                             .attr("transform",`translate(${margin.left},${margin.top})`);
+
+        let barChartAnnotations = barChart.append("g").attr("id","annotations");
+        let barChartArea = barChart.append("g").attr("id","points")
+                        .attr("transform",`translate(${margin.left},${margin.top})`);
         d3.csv("nba2k20-full.csv").then( (data) => {
+            // scatter plot
             // filter function 
             data.forEach(function (d) {
                 d['rating'] = Number(d['rating']);
@@ -86,6 +95,10 @@
                     d['ages'] = 100 + subtraction;
                 }
             });
+
+            // Aggregate Data by team
+            aggre_data = d3.rollups(data, v => d3.mean(v, d => d.salary/d.rating), d => d.team);
+
 
             // Scales
             const ratingExtent = d3.extent(data, d => d['rating']);
@@ -150,9 +163,6 @@
                 .attr("transform", "rotate(-90)")
                 .text("Rating");
 
-            let jitter = function () {
-                return (Math.random() * 8 - 4);
-            };
 
             // Add circles 
             let circles = chartArea.selectAll("circle").data(data)
@@ -267,13 +277,74 @@
                 .style("color", "black")
                 .on("click", function () {
                     circles.attr("visibility", "");
-                    // d3.selectAll("#scatterplot circle").each(function () {
-                    //     let element = d3.select(this);
-                    //     element.attr("visibility", "")
-                    //         .attr("opacity", "0.7");
-                    //     d3.select("#ages").text("");
-                    // });
                 });
+
+
+
+            
+            // bar chart
+            const investRatioExtent = d3.extent(aggre_data, d => d[1]);
+            // remove free agent
+            aggre_data.splice(21, 1);
+            const investRatioScale = d3.scaleLinear().domain(investRatioExtent).range([chartHeight, 0]);
+            const team = d3.map(aggre_data, d => d[0]);
+            const teamScale = d3.scaleBand().domain(team).range([0, chartWidth])
+                                .padding(0.1);
+            let barChartLeftAxis = d3.axisLeft(investRatioScale);
+            let barChartLeftGridlines = d3.axisLeft(investRatioScale)
+                                    .tickSize(-chartWidth-10)
+                                    .tickFormat("")
+            barChartAnnotations.append("g")
+                        .attr("class", "y axis")
+                        .attr("transform",`translate(${margin.left-10},${margin.top})`)
+                        .call(barChartLeftAxis)
+            barChartAnnotations.append("g")
+                        .attr("class", "y gridlines")
+                        .attr("transform",`translate(${margin.left-10},${margin.top})`)
+                        .call(barChartLeftGridlines);
+            let barChartBottomAxis = d3.axisBottom(teamScale);
+
+            barChartAnnotations.append("g")
+                .attr("class", "x axis")
+                .attr("transform",`translate(${margin.left},${chartHeight+margin.top+10})`)
+                .call(d3.axisBottom(teamScale))
+                .selectAll("text")	
+                    .style("text-anchor", "end")
+                    .attr("dx", "-.8em")
+                    .attr("dy", ".15em")
+                    .attr("transform", "rotate(-65)");
+
+            barChartArea.append("text") // x label
+                .attr("class", "x label")
+                .attr("text-anchor", "end")
+                .attr("x", chartWidth - 400)
+                .attr("y", chartHeight + 130)
+                .text("Team");
+
+            barChartArea.append("text") // y label
+                .attr("class", "y label")
+                .attr("text-anchor", "end")
+                .attr("x", -140)
+                .attr("y", -80)
+                .attr("dy", ".75em")
+                .attr("transform", "rotate(-90)")
+                .text("Investment-Return Ratio");
+
+            // barChartAnnotations.append("g")
+            //             .attr("class", "x axis")
+            //             .attr("transform",`translate(${margin.left},${chartHeight+margin.top+10})`)
+            //             .call(barChartBottomAxis);
+            // console.log(investRatioExtent);
+            // console.log(investRatioScale(investRatioExtent[0]) - investRatioScale(d[1]));
+            
+            // Now do the data join to make some rectangles
+            barChartArea.selectAll('rect.bar').data( aggre_data )
+                    .join('rect').attr('class','bar')
+                    .attr("fill", "steelblue")
+                    .attr("x", d => teamScale(d[0]))
+                    .attr("y", d => investRatioScale(d[1]))
+                    .attr("height", d => investRatioScale(investRatioExtent[0]) - investRatioScale(d[1]))
+                    .attr("width", teamScale.bandwidth());
 
 
         });
