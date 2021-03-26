@@ -4,7 +4,7 @@
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <style>
         .legend span {
-            margin-left: 50px;
+            margin: 25px;
         }
         .gridlines line {
             stroke: #bbb;
@@ -28,6 +28,32 @@
         g.mouseover text:first-child {
             font-weight: bold;
         }
+        button {
+            background-color: white;
+            padding: 12px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 15px;
+            margin: 4px 4px;
+            border: 2px solid #e7e7e7;
+            border-radius: 10px;
+            transition-duration: 0.6s;
+            cursor: pointer;
+            color: black;
+        }
+        button:hover {background-color: #e7e7e7;}
+
+        #clear button {
+            background-color: #4CAF50;
+            border: 2px solid #4CAF50;
+            padding: 12px 24px;
+        }
+        #clear button:hover { 
+            background-color: white;
+        }
+
+
     </style>
 </head>
 
@@ -37,23 +63,22 @@
 
 
     <p id="p1">
-    <h3>Keyang Yu (ky442) , Yangkai He (yh952) , Yuki Wu (zw499)<br>
-        <br>Scatter plot of NBA2K20 players' rating vs salary
-    </h3>
-    <svg id="scatterplot" height="600" width="800" style="margin-top:50px">
+    <h3>Keyang Yu (ky442) , Yangkai He (yh952) , Yuki Wu (zw499)</h3>
+    <h2>Scatter plot of NBA2K20 players' rating vs salary</h2>
+    <svg id="scatterplot" height="700" width="1000" style="margin-top:50px">
         <text id="age" x="25" y="780" text-anchor="start" alignment-baseline="hanging"></text>
-        <text id="mean_rating" x="690" y="355" text-anchor="start" alignment-baseline="hanging">Mean Rating</text>
+        <text id="mean_rating" x="880" y="395" text-anchor="start" alignment-baseline="hanging">Mean Rating</text>
     </svg>
 
-    <div id="scatterLegend" class="legend">
-        <input type="range" min="21" max="41" step="1" id="slider">
-    </div>
-    <div id="ageRange"></div>
+    <div id="scatterLegend" class="legend">Position: </div>
+    <div id="ageRange">Age Range: </div>
+    <div id="clear"></div>
 
-
-    <svg id="barchart" height="700" width="800" style="margin-top:50px" ></svg>
+    <h2>Bar Chart of NBA teams' investment-return ratio</h2>
+    <svg id="barchart" height="800" width="1000" style="margin-top:50px" ></svg>
 
     <script>
+        // scatter plot
         const svg = d3.select("svg#scatterplot");
         const barChart = d3.select("svg#barchart");
         const width = svg.attr("width");
@@ -61,7 +86,6 @@
         const margin = { "top": 15, "right": 15, "bottom": 100, "left": 100 };
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
-        // let scatter = svg.append("g").attr("transform", "translate(" + margins.left + "," + margins.top + ")");
         let annotations = svg.append("g").attr("id", "annotations");
         let chartArea = svg.append("g").attr("id", "points")
                             .attr("transform",`translate(${margin.left},${margin.top})`);
@@ -70,9 +94,8 @@
         let barChartArea = barChart.append("g").attr("id","points")
                         .attr("transform",`translate(${margin.left},${margin.top})`);
         d3.csv("nba2k20-full.csv").then( (data) => {
-            console.log(data)
-            // scatter plot
             // filter function 
+            var allAgeGroups = []; // store all the age groups for future use
             data.forEach(function (d) {
                 d['rating'] = Number(d['rating']);
                 d['salary'] = Number(d['salary'].replace(/\$/g, ""));
@@ -95,14 +118,16 @@
                     d['age'] = 100 + subtraction;
                 }
 
-                if (d['age'] >= 21 && d['age'] < 26){
-                    d['ageGroup'] = "21~25"
-                }
-                else if (d['age'] >= 26 && d['age'] < 31) { d['ageGroup'] = "26~30" }
-                else if (d['age'] >= 31 && d['age'] < 36) { d['ageGroup'] = "31~35" }
-                else { d['ageGroup'] = "36 and above" }
-
+                if (d['age'] >= 21 && d['age'] < 26){ d['ageGroup'] = "21~25 yrs old" }
+                else if (d['age'] >= 26 && d['age'] < 31) { d['ageGroup'] = "26~30 yrs old" }
+                else if (d['age'] >= 31 && d['age'] < 36) { d['ageGroup'] = "31~35 yrs old" }
+                else { d['ageGroup'] = "36 yrs old and above" }
+                
+                allAgeGroups.push(d['ageGroup']) // add all AgeGroups to the array
             });
+
+            var allAgeGroups = [...new Set(allAgeGroups)]  // delete duplicated data, only usable for ES6
+            allAgeGroups.sort()
 
             // Aggregate Data by team
             aggre_data = d3.rollups(data, v => d3.mean(v, d => (d.rating/d.salary)*10000), d => d.team);
@@ -117,7 +142,6 @@
             const salaryScale = d3.scaleLinear().domain(salaryExtent).range([0, chartWidth]);
 
             const positionScale = d3.scaleOrdinal(d3.schemeCategory10); // color the positions
-            const ageScale = d3.scaleOrdinal(d3.schemeCategory10);
 
             // Y axis
             let leftAxis = d3.axisLeft(ratingScale);
@@ -159,17 +183,19 @@
             svg.append("text") // x label
                 .attr("class", "x label")
                 .attr("text-anchor", "end")
-                .attr("x", chartWidth - 400)
+                .attr("x", chartWidth - 320)
                 .attr("y", chartHeight + 80)
+                .style("font-size", "25px")
                 .text("Salary");
 
             svg.append("text") // y label
                 .attr("class", "y label")
                 .attr("text-anchor", "end")
-                .attr("x", -300)
+                .attr("x", -265)
                 .attr("y", 30)
                 .attr("dy", ".75em")
                 .attr("transform", "rotate(-90)")
+                .style("font-size", "25px")
                 .text("Rating");
 
 
@@ -181,7 +207,7 @@
                                     .attr("r", 3)
                                     .attr("opacity", 0.7)
                                     .attr("age",d => d['age'])
-                                    .attr("ageGroup", d => ageScale(d['ageGroup']))
+                                    .attr("ageGroup", d => d['ageGroup'])
                                     .style("fill", d => positionScale(d['position']));
                                     
 
@@ -229,9 +255,8 @@
                 mouseover.attr("visibility","hidden");
             });
             
-            // Legend and sliders 
+            // Legend
             positionScale.domain().forEach(function (d, i) {
-                console.log(positionScale.domain())
                 d3.select("#scatterLegend")
                     .append("span")
                     .text(d)
@@ -249,12 +274,10 @@
             });
 
             // age Group button
-            ageScale.domain().forEach(function (d, i) {
-                console.log(ageScale.domain())
+            allAgeGroups.forEach(function (d, i) {
                 d3.select("#ageRange")
-                    .append("span")
+                    .append("button")
                     .text(d)
-                    .style("color", ageScale(d))
                     .on("click", function () {
                         circles.attr("visibility", circleD => {
                         if (circleD['ageGroup'] === d) {
@@ -268,10 +291,10 @@
             });
 
 
-            // Legend for clear button
-            d3.select("#scatterLegend")
-                .append("span")
-                .text("clear")
+            // Clear button
+            d3.select("#Clear")
+                .append("button")
+                .text("Clear")
                 .style("color", "black")
                 .on("click", function () {
                     circles.attr("visibility", "");
@@ -316,7 +339,6 @@
                         .attr("transform",`translate(${margin.left-10},${margin.top})`)
                         .call(barChartLeftGridlines);
 
-
             barChartAnnotations.append("g")
                 .attr("class", "x axis")
                 .attr("transform",`translate(${margin.left},${chartHeight+margin.top+10})`)
@@ -330,8 +352,9 @@
             barChartArea.append("text") // x label
                 .attr("class", "x label")
                 .attr("text-anchor", "end")
-                .attr("x", chartWidth - 400)
-                .attr("y", chartHeight + 130)
+                .attr("x", chartWidth - 420)
+                .attr("y", chartHeight + 150)
+                .style("font-size", "25px")
                 .text("Team");
 
             barChartArea.append("text") // y label
@@ -341,6 +364,7 @@
                 .attr("y", -80)
                 .attr("dy", ".75em")
                 .attr("transform", "rotate(-90)")
+                .style("font-size", "25px")
                 .text("Investment-Return Ratio");
 
             
