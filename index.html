@@ -30,33 +30,37 @@
 
     <p id="p1">
     <h3>Keyang Yu (ky442) , Yangkai He (yh952) , Yuki Wu (zw499)<br>
-      <br>Scatter plot of NBA2K20 players's rating vs salary
+        <br>Scatter plot of NBA2K20 players's rating vs salary
     </h3>
-    <svg id="scatterplot" height="800" width="1200" style="margin-top:50px">
+    <svg id="scatterplot" height="600" width="800" style="margin-top:50px">
         <text id="name" x="590" y="0" text-anchor="end" alignment-baseline="hanging"></text>
         <text id="team" x="590" y="20" text-anchor="end" alignment-baseline="hanging"></text>
         <text id="ages" x="25" y="780" text-anchor="start" alignment-baseline="hanging"></text>
-        <text id="mean_rating" x="1100" y="500" text-anchor="start" alignment-baseline="hanging">Mean Rating</text>
+        <text id="mean_rating" x="690" y="355" text-anchor="start" alignment-baseline="hanging">Mean Rating</text>
     </svg>
 
     <div id="scatterLegend" class="legend">
-      <input type="range" min="21" max="41" step="1" id="slider">
+        <input type="range" min="21" max="41" step="1" id="slider">
     </div>
 
     <script>
         const svg = d3.select("svg#scatterplot");
         const width = svg.attr("width");
         const height = svg.attr("height");
-        const margins = { "top": 15, "right": 15, "bottom": 100, "left": 100 };
-        const chartWidth = width - margins.left - margins.right;
-        const chartHeight = height - margins.top - margins.bottom;
-        let scatter = svg.append("g").attr("transform", "translate(" + margins.left + "," + margins.top + ")");
-        d3.csv("nba2k20-full.csv").then(function (data) {
-            dataLength = data.length;
-            // Data preprocessing
+        const margin = { "top": 15, "right": 15, "bottom": 100, "left": 100 };
+        const chartWidth = width - margin.left - margin.right;
+        const chartHeight = height - margin.top - margin.bottom;
+        // let scatter = svg.append("g").attr("transform", "translate(" + margins.left + "," + margins.top + ")");
+        let annotations = svg.append("g").attr("id", "annotations");
+        let chartArea = svg.append("g").attr("id", "points")
+                            .attr("transform",`translate(${margin.left},${margin.top})`);
+        d3.csv("nba2k20-full.csv").then( (data) => {
+            // filter function 
             data.forEach(function (d) {
                 d['rating'] = Number(d['rating']);
                 d['salary'] = Number(d['salary'].replace(/\$/g, ""));
+                if (d['team'] == '') { d['team'] = 'Free Agent'; } // If team is blank, it's a free agent
+                // Use main position
                 d['position'] = d['position'].substring(0, 1);
                 if (d['position'] == 'C') {
                     d['position'] = 'Center';
@@ -65,51 +69,59 @@
                 } else {
                     d['position'] = 'Guard';
                 }
+                // Get player's age
                 d['ages'] = Number(d['b_day'].slice(-2));
                 var subtraction = 21 - d['ages'];
                 if (subtraction >= 0) {
-                  d['ages'] = subtraction;
+                    d['ages'] = subtraction;
                 } else {
-                  d['ages'] = 100 + subtraction;
+                    d['ages'] = 100 + subtraction;
                 }
             });
 
-            const ratingExtent = d3.extent(data, d => d['rating']);
+            // Scales
             const avgRating = d3.mean(data, d => d['rating']);
+            const ratingExtent = d3.extent(data, d => d['rating']);
             const ratingScale = d3.scaleLinear().domain(ratingExtent).range([chartHeight, 0]);
+
             const salaryExtent = d3.extent(data, d => d['salary']);
             const salaryScale = d3.scaleLinear().domain(salaryExtent).range([0, chartWidth]);
 
-            const positionScale = d3.scaleOrdinal(d3.schemeCategory10);
+            const positionScale = d3.scaleOrdinal(d3.schemeCategory10); // color the positions
+
+            // Y axis
             let leftAxis = d3.axisLeft(ratingScale);
-            svg.append("g")
-                .attr("class", "y axis")
-                .attr("transform", "translate(" + (margins.left - 10) + "," + margins.top + ")")
-                .call(leftAxis);
-
             let leftGridlines = d3.axisLeft(ratingScale)
-                .tickSize(-chartWidth - 10)
-                .tickFormat("");
-
-            svg.append("g")
-                .attr("class", "y gridlines")
-                .attr("transform", "translate(" + (margins.left - 10) + "," + margins.top + ")")
-                .call(leftGridlines);
-
-            let bottomAxis = d3.axisBottom(salaryScale).tickFormat(d3.format("$.0s"));
-            svg.append("g")
+                                    .tickSize(-chartWidth - 10)
+                                    .tickFormat("");
+            annotations.append("g")
                 .attr("class", "y axis")
-                .attr("transform", "translate(" + margins.left + "," + (chartHeight + margins.top + 10) + ")")
-                .call(bottomAxis);
-
-            svg.append("g")
+                .attr("transform",`translate(${margin.left-10},${margin.top})`)
+                .call(leftAxis);
+            annotations.append("g")
                 .attr("class", "y gridlines")
-                .attr("transform", "translate(" + (margins.left - 10) + "," + margins.top + ")")
+                .attr("transform",`translate(${margin.left-10},${margin.top})`)
                 .call(leftGridlines);
 
+            // X axis
+            let bottomAxis = d3.axisBottom(salaryScale).tickFormat(d3.format("$.2s")); // format the salary
+            console.log(salaryExtent)
+            let bottomGridlines = d3.axisBottom(salaryScale)
+                                    .tickSize(-chartHeight - 10)
+                                    .tickFormat("")
+            annotations.append("g")
+                .attr("class", "x axis")
+                .attr("transform",`translate(${margin.left},${chartHeight+margin.top+10})`)
+                .call(bottomAxis);
+            annotations.append("g")
+                .attr("class", "x gridlines")
+                .attr("transform",`translate(${margin.left},${chartHeight+margin.top+10})`)
+                .call(bottomGridlines);
+
+            // additional features
             svg.append("line")
                 .attr("class", "avgline")
-                .attr("transform", "translate(" + margins.left + "," + margins.top + ")")
+                .attr("transform", "translate(" + (margin.left - 10) + "," + margin.top + ")")
                 .attr("x1", 0)
                 .attr("x2", chartWidth + 10)
                 .attr("y1", ratingScale(avgRating))
@@ -135,95 +147,90 @@
                 return (Math.random() * 8 - 4);
             };
 
-            jitter_value_x = jitter();
-            jitter_value_y = jitter();
-            data.forEach((d, i) => {
-                let circle = scatter.append("circle")
-                                    .attr("cx", salaryScale(d['salary']))
-                                    .attr("cy", ratingScale(d['rating']))
+            // Adding circles & effects
+            let circles = chartArea.selectAll("circle").data(data)
+                                    .join("circle")
+                                    .attr("cx", d => salaryScale(d['salary']))
+                                    .attr("cy", d => ratingScale(d['rating']))
                                     .attr("r", 3)
                                     .attr("opacity", 0.7)
-                                    .attr("index", i)
-                                    .attr("name", d['full_name'])
-                                    .attr("position", d['position'])
-                                    .attr("state",d['ages'])
-                                    .style("fill", positionScale(d['position']));
+                                    .style("fill", d => positionScale(d['position']))
+                                    .on("mouseover", function() {   // You could also separate this out into circles.on("mous...
+                                        d3.select(this)
+                                        .transition().duration(200)
+                                        .attr("stroke-width",4)
+                                        .attr("r", 8)
+                                        .attr("stroke","black")
+                                        .style("fill", d => positionScale(d['position']));
+                                    
+                                        let name = d3.select(this).datum()['full_name']
+                                        let team = d3.select(this).datum()['team']
+                                    
+                                        d3.select("#label")
+                                        .text(name)
+                                        .text(team);
+                                        })
+                                    .on("mouseout", function () {
+                                        d3.select(this)
+                                        .transition().duration(200)
+                                        .attr("stroke-width", 0)
+                                        .attr("r", 3)
+                                        .attr("opacity", 0.7);
 
-                circle.on("mouseover", function () {
-                    d3.select(this)
-                      .transition().duration(200)
-                      .attr("stroke", "black")
-                      .attr("stroke-width", 4)
-                      .attr("r", 8)
-                      .attr("opacity", 1);
+                                        d3.select("#label").text("");
+                                        });
 
-                    d3.select("#name").text("Name: " + d['full_name']);
-                    d3.select("#team").text("Team: " + d['team']);
-
-                });
-
-                circle.on("mouseout", function () {
-
-                    d3.select(this)
-                      .transition().duration(200)
-                      .attr("stroke-width", 0)
-                      .attr("r", 3)
-                      .attr("opacity", 0.7);
-
-                    d3.select("#label").text("");
-                });
-            });
-
+            // Slider 
             positionScale.domain().forEach(function (d, i) {
-
                 d3.select("#scatterLegend")
-                  .append("span")
-                  .text(d)
-                  .style("color", positionScale(d))
-                  .on("click", function () {
-                      d3.selectAll("#scatterplot circle").each(function () {
-                          let element = d3.select(this);
-                          if (element.attr("position") === d) {
-                              //matches
-                              element.attr("visibility","");
-                          }
-                          else {
-                              //not match
-                              element.attr("visibility","hidden");
-                          }
-                      });
-                  });
+                    .append("span")
+                    .text(d)
+                    .style("color", positionScale(d))
+                    .on("click", function () {
+                        d3.selectAll("#scatterplot circle").each(function () {
+                            let element = d3.select(this);
+                            if (element.attr("position") === d) {
+                                //matches
+                                element.attr("visibility", "");
+                            }
+                            else {
+                                //not match
+                                element.attr("visibility", "hidden");
+                            }
+                        });
+                    });
 
-              d3.select("#slider")
-                .on("input", function() {
-                  let sliderInput = this.value;
-                  d3.selectAll("#scatterplot circle").each(function () {
-                    let cir = d3.select(this);
-                    let state = cir.attr("state");
-                    console.log(sliderInput)
-                    if (state == sliderInput) {
-                      cir.attr("visibility","");
-                    }
-                    else {
-                      cir.attr("visibility","hidden");
-                    }
-                  });
-                  d3.select("#ages").text(sliderInput + " years old");
-                });
+                d3.select("#slider")
+                    .on("input", function () {
+                        let sliderInput = this.value;
+                        d3.selectAll("#scatterplot circle").each(function () {
+                            let cir = d3.select(this);
+                            let state = cir.attr("state");
+                            console.log(sliderInput)
+                            if (state == sliderInput) {
+                                cir.attr("visibility", "");
+                            }
+                            else {
+                                cir.attr("visibility", "hidden");
+                            }
+                        });
+                        d3.select("#ages").text(sliderInput + " years old");
+                    });
             });
 
+            // Legends
             d3.select("#scatterLegend")
-              .append("span")
-              .text("clear")
-              .style("color", "black")
-              .on("click", function () {
-                  d3.selectAll("#scatterplot circle").each(function () {
-                      let element = d3.select(this);
-                      element.attr("visibility","")
-                             .attr("opacity", "0.7");
-                  d3.select("#ages").text("");
-                  });
-              });
+                .append("span")
+                .text("clear")
+                .style("color", "black")
+                .on("click", function () {
+                    d3.selectAll("#scatterplot circle").each(function () {
+                        let element = d3.select(this);
+                        element.attr("visibility", "")
+                            .attr("opacity", "0.7");
+                        d3.select("#ages").text("");
+                    });
+                });
 
 
         });
