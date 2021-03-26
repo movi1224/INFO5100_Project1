@@ -6,19 +6,27 @@
         .legend span {
             margin-left: 50px;
         }
-
         .gridlines line {
             stroke: #bbb;
         }
-
         .gridlines .domain {
             stroke: none;
         }
-
         line.avgline {
             stroke: black;
             stroke-width: 2px;
             stroke-dasharray: 8;
+        }
+        g.mouseover rect {
+            fill: white;
+            stroke: #222;
+            stroke-width: 1px;
+        }
+        g.mouseover text {
+            font-family: Arial, sans-serif;
+        }
+        g.mouseover text:first-child {
+            font-weight: bold;
         }
     </style>
 </head>
@@ -80,9 +88,9 @@
             });
 
             // Scales
-            const avgRating = d3.mean(data, d => d['rating']);
             const ratingExtent = d3.extent(data, d => d['rating']);
             const ratingScale = d3.scaleLinear().domain(ratingExtent).range([chartHeight, 0]);
+            const avgRating = d3.mean(data, d => d['rating']);
 
             const salaryExtent = d3.extent(data, d => d['salary']);
             const salaryScale = d3.scaleLinear().domain(salaryExtent).range([0, chartWidth]);
@@ -105,10 +113,9 @@
 
             // X axis
             let bottomAxis = d3.axisBottom(salaryScale).tickFormat(d3.format("$.2s")); // format the salary
-            console.log(salaryExtent)
             let bottomGridlines = d3.axisBottom(salaryScale)
                                     .tickSize(-chartHeight - 10)
-                                    .tickFormat("")
+                                    .tickFormat("");
             annotations.append("g")
                 .attr("class", "x axis")
                 .attr("transform",`translate(${margin.left},${chartHeight+margin.top+10})`)
@@ -119,7 +126,7 @@
                 .call(bottomGridlines);
 
             // additional features
-            svg.append("line")
+            svg.append("line") // average line
                 .attr("class", "avgline")
                 .attr("transform", "translate(" + (margin.left - 10) + "," + margin.top + ")")
                 .attr("x1", 0)
@@ -127,14 +134,14 @@
                 .attr("y1", ratingScale(avgRating))
                 .attr("y2", ratingScale(avgRating));
 
-            svg.append("text")
+            svg.append("text") // x label
                 .attr("class", "x label")
                 .attr("text-anchor", "end")
                 .attr("x", chartWidth - 400)
                 .attr("y", chartHeight + 80)
                 .text("Salary");
 
-            svg.append("text")
+            svg.append("text") // y label
                 .attr("class", "y label")
                 .attr("text-anchor", "end")
                 .attr("x", -300)
@@ -147,7 +154,7 @@
                 return (Math.random() * 8 - 4);
             };
 
-            // Adding circles & effects
+            // Add circles 
             let circles = chartArea.selectAll("circle").data(data)
                                     .join("circle")
                                     .attr("cx", d => salaryScale(d['salary']))
@@ -155,55 +162,90 @@
                                     .attr("r", 3)
                                     .attr("opacity", 0.7)
                                     .style("fill", d => positionScale(d['position']))
-                                    .on("mouseover", function() {   // You could also separate this out into circles.on("mous...
-                                        d3.select(this)
-                                        .transition().duration(200)
-                                        .attr("stroke-width",4)
-                                        .attr("r", 8)
-                                        .attr("stroke","black")
-                                        .style("fill", d => positionScale(d['position']));
-                                    
-                                        let name = d3.select(this).datum()['full_name']
-                                        let team = d3.select(this).datum()['team']
-                                    
-                                        d3.select("#label")
-                                        .text(name)
-                                        .text(team);
-                                        })
-                                    .on("mouseout", function () {
-                                        d3.select(this)
-                                        .transition().duration(200)
-                                        .attr("stroke-width", 0)
-                                        .attr("r", 3)
-                                        .attr("opacity", 0.7);
 
-                                        d3.select("#label").text("");
-                                        });
+            // Add animations and textbox
+            const mouseover = svg.append("g").attr("class","mouseover")
+                                        .attr("transform",`translate(${margin.left+15},${margin.top+15})`);
+            const frame = mouseover.append("rect").attr("class","frame")
+                                                .attr("x", 0).attr("y", 0)
+                                                .attr("rx", 5).attr("ry", 5)  // rx and ry round corners
+                                                .attr("height", 50);  // set width later
+            const textbox = mouseover.append("g").attr("transform","translate(10,10)");
+            
+            function updateMouseover(d) { // Update texbox function
+                textbox.html('');
+                let name = `Name: ${d['full_name']}`;
+                let team = `Team: ${d['team']}`;
+                
+                let maxWidth = Math.max( stringLen(name), stringLen(team) )
+                frame.attr("width", maxWidth + 30);
+                
+                textbox.append("text").text(name)
+                    .attr("x", 0).attr("y", 10);
+                textbox.append("text").text(team)
+                    .attr("x", 0).attr("y", 30);
+            }
 
-            // Slider 
+            circles.on("mouseover", function() {
+                d3.select(this)
+                .transition().duration(200)
+                .attr("stroke-width",4)
+                .attr("r", 8)
+                .attr("stroke","black")
+                .style("fill", d => lighten( positionScale(d['position']) ));
+                mouseover.attr("visibility","");
+                updateMouseover( d3.select(this).datum() );
+            })
+
+            circles.on("mouseout", function () {
+                d3.select(this)
+                .transition().duration(200)
+                .attr("stroke-width", 0)
+                .attr("r", 3)
+                .attr("opacity", 0.7)
+                .style("fill", d => ( positionScale(d['position']) ));
+                mouseover.attr("visibility","hidden");
+            });
+            
+
+            // Helper Functions
+            function stringLen(str) { // get the string length
+                const dummytext = mouseover.append("text").attr("class","legendtext").attr("visibility","hidden");
+                dummytext.text(str)
+                let len = dummytext.node().getComputedTextLength()
+                dummytext.remove()
+                return len;
+            }
+            function lighten(color) { // lighten the color
+                let hclColor = d3.hcl(color);
+                let luma = Math.min(130, hclColor.l + 30);
+                return d3.rgb( d3.hcl( hclColor.h, hclColor.c, luma ) );
+            }
+
+        
+
+
+            // Legend and sliders 
             positionScale.domain().forEach(function (d, i) {
                 d3.select("#scatterLegend")
                     .append("span")
                     .text(d)
                     .style("color", positionScale(d))
                     .on("click", function () {
-                        d3.selectAll("#scatterplot circle").each(function () {
-                            let element = d3.select(this);
-                            if (element.attr("position") === d) {
-                                //matches
-                                element.attr("visibility", "");
-                            }
-                            else {
-                                //not match
-                                element.attr("visibility", "hidden");
-                            }
+                        circles.attr("visibility", circleD => {
+                        if (circleD["position"] === d) {
+                            return "";
+                        }
+                        else {
+                            return "hidden";
+                        }
                         });
                     });
 
                 d3.select("#slider")
                     .on("input", function () {
                         let sliderInput = this.value;
-                        d3.selectAll("#scatterplot circle").each(function () {
+                        d3.selectAll("circle").each(function () {
                             let cir = d3.select(this);
                             let state = cir.attr("state");
                             console.log(sliderInput)
@@ -224,12 +266,13 @@
                 .text("clear")
                 .style("color", "black")
                 .on("click", function () {
-                    d3.selectAll("#scatterplot circle").each(function () {
-                        let element = d3.select(this);
-                        element.attr("visibility", "")
-                            .attr("opacity", "0.7");
-                        d3.select("#ages").text("");
-                    });
+                    circles.attr("visibility", "");
+                    // d3.selectAll("#scatterplot circle").each(function () {
+                    //     let element = d3.select(this);
+                    //     element.attr("visibility", "")
+                    //         .attr("opacity", "0.7");
+                    //     d3.select("#ages").text("");
+                    // });
                 });
 
 
