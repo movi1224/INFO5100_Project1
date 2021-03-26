@@ -41,15 +41,14 @@
         <br>Scatter plot of NBA2K20 players' rating vs salary
     </h3>
     <svg id="scatterplot" height="600" width="800" style="margin-top:50px">
-        <text id="name" x="590" y="0" text-anchor="end" alignment-baseline="hanging"></text>
-        <text id="team" x="590" y="20" text-anchor="end" alignment-baseline="hanging"></text>
-        <text id="ages" x="25" y="780" text-anchor="start" alignment-baseline="hanging"></text>
+        <text id="age" x="25" y="780" text-anchor="start" alignment-baseline="hanging"></text>
         <text id="mean_rating" x="690" y="355" text-anchor="start" alignment-baseline="hanging">Mean Rating</text>
     </svg>
 
     <div id="scatterLegend" class="legend">
         <input type="range" min="21" max="41" step="1" id="slider">
     </div>
+    <div id="ageRange"></div>
 
 
     <svg id="barchart" height="700" width="800" style="margin-top:50px" ></svg>
@@ -71,6 +70,7 @@
         let barChartArea = barChart.append("g").attr("id","points")
                         .attr("transform",`translate(${margin.left},${margin.top})`);
         d3.csv("nba2k20-full.csv").then( (data) => {
+            console.log(data)
             // scatter plot
             // filter function 
             data.forEach(function (d) {
@@ -87,13 +87,21 @@
                     d['position'] = 'Guard';
                 }
                 // Get player's age
-                d['ages'] = Number(d['b_day'].slice(-2));
-                var subtraction = 21 - d['ages'];
+                d['age'] = Number(d['b_day'].slice(-2));
+                var subtraction = 21 - d['age'];
                 if (subtraction >= 0) {
-                    d['ages'] = subtraction;
+                    d['age'] = subtraction;
                 } else {
-                    d['ages'] = 100 + subtraction;
+                    d['age'] = 100 + subtraction;
                 }
+
+                if (d['age'] >= 21 && d['age'] < 26){
+                    d['ageGroup'] = "21~25"
+                }
+                else if (d['age'] >= 26 && d['age'] < 31) { d['ageGroup'] = "26~30" }
+                else if (d['age'] >= 31 && d['age'] < 36) { d['ageGroup'] = "31~35" }
+                else { d['ageGroup'] = "36 and above" }
+
             });
 
             // Aggregate Data by team
@@ -109,6 +117,7 @@
             const salaryScale = d3.scaleLinear().domain(salaryExtent).range([0, chartWidth]);
 
             const positionScale = d3.scaleOrdinal(d3.schemeCategory10); // color the positions
+            const ageScale = d3.scaleOrdinal(d3.schemeCategory10);
 
             // Y axis
             let leftAxis = d3.axisLeft(ratingScale);
@@ -172,7 +181,9 @@
                                     .attr("r", 3)
                                     .attr("opacity", 0.7)
                                     .attr("age",d => d['age'])
+                                    .attr("ageGroup", d => ageScale(d['ageGroup']))
                                     .style("fill", d => positionScale(d['position']));
+                                    
 
             // Add animations and textbox
             const mouseover = svg.append("g").attr("class","mouseover")
@@ -218,26 +229,9 @@
                 mouseover.attr("visibility","hidden");
             });
             
-
-            // Helper Functions
-            function stringLen(str) { // get the string length
-                const dummytext = mouseover.append("text").attr("class","legendtext").attr("visibility","hidden");
-                dummytext.text(str)
-                let len = dummytext.node().getComputedTextLength()
-                dummytext.remove()
-                return len;
-            }
-            function lighten(color) { // lighten the color
-                let hclColor = d3.hcl(color);
-                let luma = Math.min(130, hclColor.l + 30);
-                return d3.rgb( d3.hcl( hclColor.h, hclColor.c, luma ) );
-            }
-
-        
-
-
             // Legend and sliders 
             positionScale.domain().forEach(function (d, i) {
+                console.log(positionScale.domain())
                 d3.select("#scatterLegend")
                     .append("span")
                     .text(d)
@@ -252,28 +246,29 @@
                         }
                         });
                     });
+            });
 
-                d3.select("#slider")
-                    .on("input", function () {
-                        let sliderInput = this.value;
-                        d3.selectAll("circle").each(function () {
-                            let cir = d3.select(this);
-                            console.log(cir);
-                            let state = cir.attr("age");
-                            console.log(sliderInput);
-                            console.log(state);
-                            if (state == sliderInput) {
-                                cir.attr("visibility", "");
-                            }
-                            else {
-                                cir.attr("visibility", "hidden");
-                            }
+            // age Group button
+            ageScale.domain().forEach(function (d, i) {
+                console.log(ageScale.domain())
+                d3.select("#ageRange")
+                    .append("span")
+                    .text(d)
+                    .style("color", ageScale(d))
+                    .on("click", function () {
+                        circles.attr("visibility", circleD => {
+                        if (circleD['ageGroup'] === d) {
+                            return "";
+                        }
+                        else {
+                            return "hidden";
+                        }
                         });
-                        d3.select("#ages").text(sliderInput + " years old");
                     });
             });
 
-            // Legends
+
+            // Legend for clear button
             d3.select("#scatterLegend")
                 .append("span")
                 .text("clear")
@@ -282,6 +277,20 @@
                     circles.attr("visibility", "");
                 });
 
+
+            // Helper Functions
+            function stringLen(str) { // get the string length
+                const dummytext = mouseover.append("text").attr("class","legendtext").attr("visibility","hidden");
+                dummytext.text(str)
+                let len = dummytext.node().getComputedTextLength()
+                dummytext.remove()
+                return len;
+            }
+            function lighten(color) { // lighten the color
+                let hclColor = d3.hcl(color);
+                let luma = Math.min(130, hclColor.l + 30);
+                return d3.rgb( d3.hcl( hclColor.h, hclColor.c, luma ) );
+            }
 
 
             
